@@ -787,10 +787,9 @@ if (!user) {
                             <th>PLANTED</th>
                             <th>PROGRESS</th>
                             <th>STATUS</th>
-                            {user?.role === 'admin' && <th>Actions</th>}
+                            {user?.role === 'admin'}
                           </tr>
                         </thead>
-
                         <tbody>
                           {stats.recent_projects.map((project) => (
                             <tr key={project.id}>
@@ -804,31 +803,7 @@ if (!user) {
                                 )}%
                               </td>
                               <td>{project.status}</td>
-                              {user?.role === 'admin' && (
-                            <td>
-                              <button
-                                onClick={() => handleEditProject(project)}
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                onClick={() => handleDeleteProject(project.id)}
-                                disabled={deletingProjectId === project.id}
-                                style={{
-                                  marginLeft: '8px',
-                                  backgroundColor: '#dc2626',
-                                  color: 'white',
-                                  border: 'none',
-                                  padding: '8px 12px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {deletingProjectId === project.id ? 'Deleting...' : 'Delete'}
-                              </button>
-                            </td>
-                          )}
+                              
                             </tr>
                           ))}
                         </tbody>
