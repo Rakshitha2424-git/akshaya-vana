@@ -13,7 +13,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,3 +35,12 @@ def home():
 @app.get("/health")
 def health_check():
     return {"status": "Healthy"}
+
+@app.get("/health/db")
+def database_health(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+
+    return {
+        "database": "Connected",
+        "status": "Healthy"
+    }
