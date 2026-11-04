@@ -6,7 +6,7 @@ function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [activePage, setActivePage] = useState('Dashboard')
-
+  const [deletingProjectId, setDeletingProjectId] = useState(null)
   const [stats, setStats] = useState(null)
   const [projects, setProjects] = useState([])
 
@@ -50,7 +50,7 @@ function App() {
         target_trees: project.target_trees ?? '',
         planted_trees: project.planted_trees ?? '',
         planting_date: project.planting_date || '',
-        status: project.status || 'Active'
+        status: project.status || 'planning'
       })
     
       setActivePage('Edit Project')
@@ -89,6 +89,43 @@ function App() {
         )
       }
     }
+
+    // Delete project (admins only)
+const handleDeleteProject = async (projectId) => {
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this project? This action cannot be undone.'
+  )
+
+  if (!confirmed) return
+
+  setDeletingProjectId(projectId)
+  setError('')
+  setSuccess('')
+
+  try {
+    await api.delete(`/projects/${projectId}`)
+
+    // Remove deleted project from the screen
+    setProjects((previousProjects) =>
+      previousProjects.filter((project) => project.id !== projectId)
+    )
+
+    // Refresh dashboard statistics
+    const dashboardResponse = await api.get('/projects/dashboard/stats')
+    setStats(dashboardResponse.data)
+
+    setSuccess('Project deleted successfully.')
+  } catch (err) {
+    console.error('Delete project error:', err.response?.data)
+
+    setError(
+      err.response?.data?.detail ||
+      'Unable to delete project. Please try again.'
+    )
+  } finally {
+    setDeletingProjectId(null)
+  }
+}
   const [inspectionForm, setInspectionForm] = useState({
     inspection_date: '',
     surviving_trees: '',
@@ -757,6 +794,7 @@ if (!user) {
                             <th>PLANTED</th>
                             <th>PROGRESS</th>
                             <th>STATUS</th>
+                            {user?.role === 'admin' && <th>Actions</th>}
                           </tr>
                         </thead>
 
@@ -773,6 +811,31 @@ if (!user) {
                                 )}%
                               </td>
                               <td>{project.status}</td>
+                              {user?.role === 'admin' && (
+                            <td>
+                              <button
+                                onClick={() => handleEditProject(project)}
+                              >
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteProject(project.id)}
+                                disabled={deletingProjectId === project.id}
+                                style={{
+                                  marginLeft: '8px',
+                                  backgroundColor: '#dc2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '8px 12px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {deletingProjectId === project.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            </td>
+                          )}
                             </tr>
                           ))}
                         </tbody>
@@ -786,376 +849,455 @@ if (!user) {
         )}
 
         {/* Projects page */}
-        {activePage === 'Projects' && (
-          <section className="projects-section">
-            <h4>All Projects</h4>
-
-            {loading && <p>Loading projects...</p>}
-
-            {error && (
-              <div className="alert alert-danger">{error}</div>
-            )}
-
-            {!loading && !error && projects.length === 0 && (
-              <p>No projects found.</p>
-            )}
-
-            {!loading && !error && projects.length > 0 && (
-              <div className="table-responsive">
-                <table className="table align-middle">
-                  <thead>
-                    <tr>
-                      <th>PROJECT NAME</th>
-                      <th>TARGET TREES</th>
-                      <th>PLANTED</th>
-                      <th>PROGRESS</th>
-                      <th>STATUS</th>
-                    </tr>
-                  </thead>
-
-                  
-<tbody>
-  {projects.map((project) => (
-    <tr key={project.id}>
-      <td>{project.title}</td>
-
-      <td>{formatNumber(project.target_trees)}</td>
-
-      <td>{formatNumber(project.planted_trees)}</td>
-
-      <td>
-        {getProgress(
-          project.planted_trees,
-          project.target_trees
-        )}%
-      </td>
-
-      <td>{project.status}</td>
-
-      <td>
-        <button
-          className="btn btn-sm btn-outline-primary"
-          onClick={() => handleEditProject(project)}
-        >
-          Edit
-        </button>
-      </td>
-    </tr>
-  ))}
-</tbody>
-
-                </table>
-              </div>
-            )}
-          </section>
-        )}
-  {activePage === 'Tree Survival' && (
+        
+{/* Projects page */}
+{activePage === 'Projects' && (
   <section className="projects-section">
-    <h4>🌳Tree Survival Intelligence</h4>
-    <p>Monitor plantation health and record scheduled inspections.</p>
-
-    {survivalLoading && <p>Loading survival data...</p>}
-
-    {survivalError && (
-      <div className="alert alert-danger">{survivalError}</div>
-    )}
-
-    {survivalMessage && (
-      <div className="alert alert-success">{survivalMessage}</div>
-    )}
-
-    {survivalStats && (
-      <div className="stats-grid">
-        <div className="stat-card">
-          <p>Projects Monitored</p>
-          <h2>{survivalStats.total_projects_monitored}</h2>
-        </div>
-
-        <div className="stat-card">
-          <p>Trees Planted</p>
-          <h2>{formatNumber(survivalStats.total_trees_planted)}</h2>
-        </div>
-
-        <div className="stat-card">
-          <p>Trees Surviving</p>
-          <h2>{formatNumber(survivalStats.total_trees_surviving)}</h2>
-        </div>
-
-        <div className="stat-card">
-          <p>Survival Rate</p>
-          <h2>{survivalStats.overall_survival_rate}%</h2>
-        </div>
-
-        <div className="stat-card">
-          <p>Overdue Inspections</p>
-          <h2>{survivalStats.overdue_inspections}</h2>
-        </div>
+    <div className="section-heading">
+      <div>
+        <h4>All Projects</h4>
+        <p className="text-muted">
+          Manage and monitor environmental projects.
+        </p>
       </div>
+
+      {user?.role?.toLowerCase() === 'admin' && (
+        <button
+          className="btn btn-success"
+          onClick={() => {
+            setError('')
+            setSuccess('')
+            setActivePage('Add Project')
+          }}
+        >
+          + Add Project
+        </button>
+      )}
+    </div>
+
+    {error && (
+      <div className="alert alert-danger">{error}</div>
     )}
-    {String(user?.role).toLowerCase() === 'admin' && (
-    <div className="card shadow-sm p-4 mt-4">
-      <h5>Generate Inspection Schedule</h5>
 
-      <label className="form-label">Select Plantation Project</label>
+    {success && (
+      <div className="alert alert-success">{success}</div>
+    )}
 
-      <select
-        className="form-select mb-3"
-        value={selectedProject}
-        onChange={async (e) => {
-          const id = e.target.value
-          setSelectedProject(id)
-          setSurvivalError('')
-          await loadInspections(id)
-        }}
-      >
-        <option value="">Choose a project</option>
+    {loading && <p>Loading projects...</p>}
 
-        {survivalProjects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.title}
-          </option>
-        ))}
-      </select>
+    {!loading && !error && projects.length === 0 && (
+      <p>No projects found.</p>
+    )}
 
-      <button
-        className="btn btn-success"
-        onClick={generateSchedule}
-        disabled={!selectedProject}
-      >
-        Generate 30 / 90 / 180 / 365-Day Schedule
-      </button>
-    </div>)}
+    {!loading && !error && projects.length > 0 && (
+      <div className="table-responsive">
+        <table className="table align-middle">
+          <thead>
+            <tr>
+              <th>PROJECT NAME</th>
+              <th>TARGET TREES</th>
+              <th>PLANTED</th>
+              <th>PROGRESS</th>
+              <th>STATUS</th>
 
-    {inspections.length > 0 && (
-      <div className="card shadow-sm p-4 mt-4">
-        <h5>Inspection Milestones</h5>
+              {user?.role?.toLowerCase() === 'admin' && (
+                <th>ACTIONS</th>
+              )}
+            </tr>
+          </thead>
 
-        <div className="table-responsive">
-          <table className="table align-middle">
-            <thead>
-              <tr>
-                <th>Milestone</th>
-                <th>Scheduled Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
+          <tbody>
+            {projects.map((project) => (
+              <tr key={project.id}>
+                <td>
+                  <strong>{project.title}</strong>
+                </td>
 
-            <tbody>
-              {inspections.map((inspection) => (
-                <tr key={inspection.id}>
-                  <td>{inspection.milestone_days} Days</td>
-                  <td>{inspection.scheduled_date}</td>
+                <td>{formatNumber(project.target_trees)}</td>
+
+                <td>{formatNumber(project.planted_trees)}</td>
+
+                <td>
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      className="progress flex-grow-1"
+                      style={{ minWidth: '70px', height: '8px' }}
+                    >
+                      <div
+                        className="progress-bar bg-success"
+                        role="progressbar"
+                        style={{
+                          width: `${Math.min(
+                            getProgress(
+                              project.planted_trees,
+                              project.target_trees
+                            ),
+                            100
+                          )}%`
+                        }}
+                      />
+                    </div>
+
+                    <small>
+                      {getProgress(
+                        project.planted_trees,
+                        project.target_trees
+                      )}%
+                    </small>
+                  </div>
+                </td>
+
+                <td>
+                  <span className="badge bg-secondary">
+                    {project.status}
+                  </span>
+                </td>
+
+                {user?.role?.toLowerCase() === 'admin' && (
                   <td>
-                    {inspection.inspection_date ? (
-                      <span className="badge bg-success">Completed</span>
-                    ) : (
-                      <span className="badge bg-warning text-dark">
-                        Pending
-                      </span>
-                    )}
+                    <div className="d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => handleEditProject(project)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDeleteProject(project.id)}
+                        disabled={deletingProjectId === project.id}
+                      >
+                        {deletingProjectId === project.id
+                          ? 'Deleting...'
+                          : 'Delete'}
+                      </button>
+                    </div>
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <h5 className="mt-3">Record an Inspection</h5>
-
-        {inspections.filter((item) => !item.inspection_date).length === 0 ? (
-          <p>All scheduled inspections are completed.</p>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              const pending = inspections.find(
-                (item) => !item.inspection_date
-              )
-              if (pending) recordInspection(e, pending.id)
-            }}
-          >
-            <div className="mb-3">
-              <label className="form-label">Inspection Date</label>
-              <input
-                type="date"
-                className="form-control"
-                value={inspectionForm.inspection_date}
-                onChange={(e) =>
-                  setInspectionForm({
-                    ...inspectionForm,
-                    inspection_date: e.target.value,
-                  })
-                }
-                required
-              />
-            </div>
-
-            <div className="row">
-              {[
-                ['surviving_trees', 'Surviving Trees'],
-                ['dead_trees', 'Dead Trees'],
-                ['missing_trees', 'Missing Trees'],
-                ['replaced_trees', 'Replaced Trees'],
-              ].map(([field, label]) => (
-                <div className="col-md-6 mb-3" key={field}>
-                  <label className="form-label">{label}</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className="form-control"
-                    value={inspectionForm[field]}
-                    onChange={(e) =>
-                      setInspectionForm({
-                        ...inspectionForm,
-                        [field]: e.target.value,
-                      })
-                    }
-                    required={field !== 'replaced_trees'}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label">Inspection Notes</label>
-              <textarea
-                className="form-control"
-                rows="3"
-                value={inspectionForm.notes}
-                onChange={(e) =>
-                  setInspectionForm({
-                    ...inspectionForm,
-                    notes: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <button
-              className="btn btn-success"
-              type="submit"
-            >
-              Save Inspection
-            </button>
-          </form>
-        )}
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     )}
   </section>
 )}
-  {activePage === 'Edit Project' && editingProject && (
-  <div className="container-fluid">
-    <h2 className="mb-4">Edit Project</h2>
 
-    <form onSubmit={handleUpdateProject}>
-      <div className="row">
+        {/* TREE SURVIVAL PAGE */}
+{activePage === 'Tree Survival' && (
+  <section className="projects-section">
 
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Project Title</label>
-          <input
-            className="form-control"
-            value={editForm.title}
-            onChange={(e) =>
-              setEditForm({...editForm, title: e.target.value})
-            }
-            required
-          />
+    <div className="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4>🌳 Tree Survival Intelligence</h4>
+        <p className="text-muted">
+          Monitor plantation health and record scheduled inspections.
+        </p>
+      </div>
+
+      <button
+        className="btn btn-outline-success"
+        onClick={loadSurvivalData}
+        disabled={survivalLoading}
+      >
+        {survivalLoading ? 'Refreshing...' : 'Refresh Data'}
+      </button>
+    </div>
+
+    {survivalLoading && (
+      <div className="alert alert-info">
+        Loading survival data...
+      </div>
+    )}
+
+    {survivalError && (
+      <div className="alert alert-danger">
+        {survivalError}
+      </div>
+    )}
+
+    {survivalMessage && (
+      <div className="alert alert-success">
+        {survivalMessage}
+      </div>
+    )}
+
+    {/* SURVIVAL STATISTICS */}
+    {survivalStats && (
+      <div className="stats-grid">
+
+        <div className="stat-card">
+          <p>Projects Monitored</p>
+          <h2>
+            {formatNumber(survivalStats.total_projects_monitored)}
+          </h2>
         </div>
 
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Location</label>
-          <input
-            className="form-control"
-            value={editForm.location}
-            onChange={(e) =>
-              setEditForm({...editForm, location: e.target.value})
-            }
-          />
+        <div className="stat-card">
+          <p>Trees Planted</p>
+          <h2>
+            {formatNumber(survivalStats.total_trees_planted)}
+          </h2>
         </div>
 
-        <div className="col-md-12 mb-3">
-          <label className="form-label">Description</label>
-          <textarea
-            className="form-control"
-            value={editForm.description}
-            onChange={(e) =>
-              setEditForm({...editForm, description: e.target.value})
-            }
-          />
+        <div className="stat-card">
+          <p>Trees Surviving</p>
+          <h2>
+            {formatNumber(survivalStats.total_trees_surviving)}
+          </h2>
         </div>
 
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Target Trees</label>
-          <input
-            type="number"
-            min="0"
-            className="form-control"
-            value={editForm.target_trees}
-            onChange={(e) =>
-              setEditForm({...editForm, target_trees: e.target.value})
-            }
-            required
-          />
+        <div className="stat-card">
+          <p>Survival Rate</p>
+          <h2>
+            {Number(survivalStats.overall_survival_rate || 0).toFixed(1)}%
+          </h2>
         </div>
 
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Planted Trees</label>
-          <input
-            type="number"
-            min="0"
-            className="form-control"
-            value={editForm.planted_trees}
-            onChange={(e) =>
-              setEditForm({...editForm, planted_trees: e.target.value})
-            }
-            required
-          />
-        </div>
-
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Planting Date</label>
-          <input
-            type="date"
-            className="form-control"
-            value={editForm.planting_date}
-            onChange={(e) =>
-              setEditForm({...editForm, planting_date: e.target.value})
-            }
-          />
-        </div>
-
-        <div className="col-md-6 mb-3">
-          <label className="form-label">Project Status</label>
-          <select
-  className="form-select"
-  value={editForm.status}
-  onChange={(e) =>
-    setEditForm({...editForm, status: e.target.value})
-  }
->
-  <option value="planning">Planning</option>
-  <option value="in-progress">In Progress</option>
-  <option value="completed">Completed</option>
-</select>
+        <div className="stat-card">
+          <p>Overdue Inspections</p>
+          <h2>
+            {formatNumber(survivalStats.overdue_inspections)}
+          </h2>
         </div>
 
       </div>
+    )}
 
-      <button type="submit" className="btn btn-success me-2">
-        Save Changes
-      </button>
+    {/* GENERATE INSPECTION SCHEDULE - ADMIN ONLY */}
+    {String(user?.role).toLowerCase() === 'admin' && (
+      <div className="card shadow-sm p-4 mt-4">
 
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => {
-          setEditingProject(null)
-          setActivePage('Projects')
-        }}
-      >
-        Cancel
-      </button>
-    </form>
-  </div>
+        <h5>📅 Generate Inspection Schedule</h5>
+
+        <p className="text-muted">
+          Select a plantation project to generate its inspection milestones.
+        </p>
+
+        <label className="form-label">
+          Select Plantation Project
+        </label>
+
+        <select
+          className="form-select mb-3"
+          value={selectedProject}
+          onChange={async (e) => {
+            const id = e.target.value
+            setSelectedProject(id)
+            setSurvivalError('')
+            setSurvivalMessage('')
+            await loadInspections(id)
+          }}
+        >
+          <option value="">Choose a project</option>
+
+          {survivalProjects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.title}
+            </option>
+          ))}
+        </select>
+
+        <button
+          className="btn btn-success"
+          onClick={generateSchedule}
+          disabled={!selectedProject}
+        >
+          Generate 30 / 90 / 180 / 365-Day Schedule
+        </button>
+
+      </div>
+    )}
+
+    {/* INSPECTION MILESTONES */}
+    <div className="card shadow-sm p-4 mt-4">
+
+      <h5>📋 Inspection Milestones</h5>
+
+      {!selectedProject ? (
+        <p className="text-muted mt-3">
+          Select a project above to view its inspection milestones.
+        </p>
+      ) : inspections.length === 0 ? (
+        <p className="text-muted mt-3">
+          No inspection records found for this project.
+          {String(user?.role).toLowerCase() === 'admin' &&
+            ' Generate an inspection schedule to get started.'}
+        </p>
+      ) : (
+        <>
+          <div className="table-responsive mt-3">
+
+            <table className="table table-hover align-middle">
+
+              <thead>
+                <tr>
+                  <th>Milestone</th>
+                  <th>Scheduled Date</th>
+                  <th>Inspection Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {inspections.map((inspection) => (
+                  <tr key={inspection.id}>
+
+                    <td>
+                      {inspection.milestone_days} Days
+                    </td>
+
+                    <td>
+                      {inspection.scheduled_date}
+                    </td>
+
+                    <td>
+                      {inspection.inspection_date || 'Not completed'}
+                    </td>
+
+                    <td>
+                      {inspection.inspection_date ? (
+                        <span className="badge bg-success">
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="badge bg-warning text-dark">
+                          Pending
+                        </span>
+                      )}
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+
+            </table>
+
+          </div>
+
+          {/* RECORD INSPECTION */}
+          <h5 className="mt-4">🌱 Record an Inspection</h5>
+
+          {inspections.filter(
+            (item) => !item.inspection_date
+          ).length === 0 ? (
+
+            <div className="alert alert-success">
+              All scheduled inspections are completed!
+            </div>
+
+          ) : String(user?.role).toLowerCase() !== 'admin' ? (
+
+            <p className="text-muted">
+              Contact an administrator to record an inspection.
+            </p>
+
+          ) : (
+
+            <form
+              onSubmit={(e) => {
+                const pending = inspections.find(
+                  (item) => !item.inspection_date
+                )
+
+                if (pending) {
+                  recordInspection(e, pending.id)
+                } else {
+                  e.preventDefault()
+                }
+              }}
+            >
+
+              <div className="row">
+
+                <div className="col-md-6 mb-3">
+                  <label className="form-label">
+                    Inspection Date
+                  </label>
+
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={inspectionForm.inspection_date}
+                    onChange={(e) =>
+                      setInspectionForm({
+                        ...inspectionForm,
+                        inspection_date: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                {[
+                  ['surviving_trees', 'Surviving Trees'],
+                  ['dead_trees', 'Dead Trees'],
+                  ['missing_trees', 'Missing Trees'],
+                  ['replaced_trees', 'Replaced Trees'],
+                ].map(([field, label]) => (
+
+                  <div className="col-md-6 mb-3" key={field}>
+                    <label className="form-label">
+                      {label}
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      className="form-control"
+                      value={inspectionForm[field]}
+                      onChange={(e) =>
+                        setInspectionForm({
+                          ...inspectionForm,
+                          [field]: e.target.value,
+                        })
+                      }
+                      required={field !== 'replaced_trees'}
+                    />
+                  </div>
+
+                ))}
+
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">
+                  Inspection Notes
+                </label>
+
+                <textarea
+                  className="form-control"
+                  rows="3"
+                  placeholder="Enter observations about tree health..."
+                  value={inspectionForm.notes}
+                  onChange={(e) =>
+                    setInspectionForm({
+                      ...inspectionForm,
+                      notes: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-success"
+              >
+                Save Inspection
+              </button>
+
+            </form>
+          )}
+
+        </>
+      )}
+
+    </div>
+
+  </section>
 )}
         {/* Add Project page */}
         {activePage === 'Add Project' && (

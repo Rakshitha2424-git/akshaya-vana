@@ -113,52 +113,6 @@ def get_project(
     return project
 
 
-@router.put("/{project_id}", response_model=ProjectResponse)
-def update_project(
-    project_id: UUID,
-    project_data: ProjectUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Only admins can update projects"
-        )
-
-    project = db.query(Project).filter(
-        Project.id == project_id
-    ).first()
-
-    if not project:
-        raise HTTPException(
-            status_code=404,
-            detail="Project not found"
-        )
-
-    update_data = project_data.model_dump(exclude_unset=True)
-
-    new_target = update_data.get(
-        "target_trees", project.target_trees
-    )
-    new_planted = update_data.get(
-        "planted_trees", project.planted_trees
-    )
-
-    if new_planted > new_target:
-        raise HTTPException(
-            status_code=400,
-            detail="Planted trees cannot exceed target trees"
-        )
-
-    for field, value in update_data.items():
-        setattr(project, field, value)
-
-    db.commit()
-    db.refresh(project)
-
-    return project
-
 # 4. UPDATE PROJECT
 @router.patch("/{project_id}", response_model=ProjectResponse)
 def update_project(
@@ -211,7 +165,6 @@ def delete_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
-
     project = db.query(Project).filter(
         Project.id == project_id
     ).first()
@@ -225,5 +178,6 @@ def delete_project(
     db.delete(project)
     db.commit()
 
-    return {"message": "Project deleted successfully"}
-
+    return {
+        "message": "Project deleted successfully"
+    }
