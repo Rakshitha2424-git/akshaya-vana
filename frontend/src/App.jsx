@@ -32,6 +32,14 @@ function App() {
     planting_date: '',
     status: 'Active'
     })
+
+    const [isRegistering, setIsRegistering] = useState(false)
+
+    const [registerForm, setRegisterForm] = useState({
+      email: '',
+      password: '',
+      confirmPassword: '',
+    })
     const handleEditProject = (project) => {
       setEditingProject(project)
     
@@ -145,7 +153,54 @@ function App() {
       setLoading(false)
     }
   }
+  
 
+  const handleRegister = async (e) => {
+    e.preventDefault()
+  
+    setError('')
+    setSuccess('')
+  
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+  
+    if (registerForm.password.length < 8) {
+      setError('Password must contain at least 8 characters.')
+      return
+    }
+  
+    setLoading(true)
+  
+    try {
+      await api.post('/auth/register', {
+        email: registerForm.email,
+        password: registerForm.password,
+      })
+  
+      setSuccess('Registration successful! Please log in.')
+  
+      setEmail(registerForm.email)
+      setPassword('')
+  
+      setRegisterForm({
+        email: '',
+        password: '',
+        confirmPassword: '',
+      })
+  
+      setIsRegistering(false)
+  
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+        'Registration failed. Please try again.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
   // Logout
   const handleLogout = async () => {
     try {
@@ -270,33 +325,134 @@ function App() {
   }
 
   // Login screen
-  if (!user) {
-    return (
-      <div className="container d-flex justify-content-center align-items-center min-vh-100">
-        <div
-          className="card shadow p-4"
-          style={{ width: '100%', maxWidth: '420px' }}
-        >
-          <div className="text-center mb-4">
-            <div style={{ fontSize: '48px' }}>🌳</div>
-            <h2>Akshaya Vana</h2>
-            <p className="text-muted">
-              Environmental Project Tracker
-            </p>
+ // Login and Registration screens
+if (!user) {
+  return (
+    <div className="container d-flex justify-content-center align-items-center min-vh-100">
+      <div
+        className="card shadow p-4"
+        style={{ width: '100%', maxWidth: '420px' }}
+      >
+        <div className="text-center mb-4">
+          <div style={{ fontSize: '48px' }}>🌳</div>
+          <h2>Akshaya Vana</h2>
+          <p className="text-muted">
+            Environmental Project Tracker
+          </p>
+        </div>
+
+        <h4 className="mb-3">
+          {isRegistering ? 'Create Your Account' : 'Welcome Back'}
+        </h4>
+
+        {error && (
+          <div className="alert alert-danger">
+            {error}
           </div>
+        )}
 
-          <h4 className="mb-3">Welcome back</h4>
+        {success && (
+          <div className="alert alert-success">
+            {success}
+          </div>
+        )}
 
-          {error && (
-            <div className="alert alert-danger">{error}</div>
-          )}
+        {isRegistering ? (
 
+          // REGISTRATION FORM
+          <form onSubmit={handleRegister}>
+
+            <div className="mb-3">
+              <label className="form-label">Email Address</label>
+              <input
+                type="email"
+                className="form-control"
+                placeholder="Enter your email"
+                value={registerForm.email}
+                onChange={(e) =>
+                  setRegisterForm({
+                    ...registerForm,
+                    email: e.target.value,
+                  })
+                }
+                required
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">Password</label>
+              <input
+                type="password"
+                className="form-control"
+                placeholder="Create a password"
+                value={registerForm.password}
+                onChange={(e) =>
+                  setRegisterForm({
+                    ...registerForm,
+                    password: e.target.value,
+                  })
+                }
+                minLength={8}
+                required
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                className="form-control"
+                placeholder="Confirm your password"
+                value={registerForm.confirmPassword}
+                onChange={(e) =>
+                  setRegisterForm({
+                    ...registerForm,
+                    confirmPassword: e.target.value,
+                  })
+                }
+                minLength={8}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-success w-100"
+              disabled={loading}
+            >
+              {loading ? 'Creating Account...' : 'Register'}
+            </button>
+
+            <p className="text-center mt-3 mb-0">
+              Already have an account?{' '}
+              <button
+                type="button"
+                className="btn btn-link p-0"
+                onClick={() => {
+                  setIsRegistering(false)
+                  setError('')
+                  setSuccess('')
+                }}
+              >
+                Login
+              </button>
+            </p>
+
+          </form>
+
+        ) : (
+
+          // LOGIN FORM
           <form onSubmit={handleLogin}>
+
             <div className="mb-3">
               <label className="form-label">Email</label>
               <input
                 type="email"
                 className="form-control"
+                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -308,6 +464,7 @@ function App() {
               <input
                 type="password"
                 className="form-control"
+                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -321,11 +478,28 @@ function App() {
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
+
+            <p className="text-center mt-3 mb-0">
+              New to Akshaya Vana?{' '}
+              <button
+                type="button"
+                className="btn btn-link p-0"
+                onClick={() => {
+                  setIsRegistering(true)
+                  setError('')
+                  setSuccess('')
+                }}
+              >
+                Create Account
+              </button>
+            </p>
+
           </form>
-        </div>
+        )}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   // Sidebar menu
   const menuItems = [
@@ -718,7 +892,7 @@ function App() {
         </div>
       </div>
     )}
-
+    {String(user?.role).toLowerCase() === 'admin' && (
     <div className="card shadow-sm p-4 mt-4">
       <h5>Generate Inspection Schedule</h5>
 
@@ -750,7 +924,7 @@ function App() {
       >
         Generate 30 / 90 / 180 / 365-Day Schedule
       </button>
-    </div>
+    </div>)}
 
     {inspections.length > 0 && (
       <div className="card shadow-sm p-4 mt-4">
