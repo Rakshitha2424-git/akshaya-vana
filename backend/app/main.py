@@ -1,5 +1,5 @@
 from fastapi import FastAPI,Depends
-from app.database import Base, engine
+from app.database import Base, engine,get_db
 from app import models
 from app.routes import auth_routes, project_routes, survival_routes
 from fastapi.middleware.cors import CORSMiddleware
