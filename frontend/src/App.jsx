@@ -772,46 +772,10 @@ if (!user) {
                 </section>
 
                 <section className="projects-section">
-                <div className="card shadow-sm p-4 mt-4">
-  <h5>Recent Projects</h5>
+                
+              <h5>Recent Projects</h5>
 
-  {stats.recent_projects?.length > 0 ? (
-    <div className="table-responsive">
-      <table className="table align-middle">
-        <thead>
-          <tr>
-            <th>Project</th>
-            <th>Location</th>
-            <th>Planted</th>
-            <th>Progress</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {stats.recent_projects.map((project) => (
-            <tr key={project.id}>
-              <td>{project.title}</td>
-              <td>{project.location || 'Not specified'}</td>
-              <td>{formatNumber(project.planted_trees)}</td>
-              <td>
-                {getProgress(
-                  project.planted_trees,
-                  project.target_trees
-                )}%
-              </td>
-              <td>{project.status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <p className="text-muted">No recent projects found.</p>
-  )}
-</div>
-
-                  {stats.recent_projects.length === 0 ? (
+              {stats.recent_projects.length === 0 ? (
                     <p>No projects available yet.</p>
                   ) : (
                     <div className="table-responsive">
@@ -877,7 +841,6 @@ if (!user) {
           </>
         )}
 
-        {/* Projects page */}
         
 {/* Projects page */}
 {activePage === 'Projects' && (
