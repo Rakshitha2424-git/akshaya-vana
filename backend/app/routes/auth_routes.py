@@ -80,13 +80,13 @@ def login_user(
 
     # Store token in HttpOnly cookie
     response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
-    )
+    key="access_token",
+    value=access_token,
+    httponly=True,
+    secure=True,
+    samesite="none",
+    max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+)
 
     return {
         "message": "Login successful",
