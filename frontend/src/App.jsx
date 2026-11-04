@@ -66,11 +66,7 @@ function App() {
           planting_date: editForm.planting_date || null
         }
     
-        await api.put(
-          `/projects/${editingProject.id}`,
-          updateData
-        )
-    
+        await api.patch(`/projects/${editingProject.id}`, updateData)
         const response = await api.get('/projects/')
         setProjects(response.data)
     
@@ -816,7 +812,161 @@ if (!user) {
           </>
         )}
 
-        
+{/* EDIT PROJECT PAGE */}
+{activePage === 'Edit Project' && (
+  <section className="projects-section">
+
+    <div className="card shadow-sm p-4">
+
+      <h4 className="mb-2">✏️ Edit Environmental Project</h4>
+
+      <p className="text-muted">
+        Update the details of your plantation project.
+      </p>
+
+      {error && (
+        <div className="alert alert-danger">{error}</div>
+      )}
+
+      <form onSubmit={handleUpdateProject}>
+
+        <div className="mb-3">
+          <label className="form-label">Project Name</label>
+          <input
+            type="text"
+            className="form-control"
+            value={editForm.title}
+            onChange={(e) =>
+              setEditForm({ ...editForm, title: e.target.value })
+            }
+            required
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Description</label>
+          <textarea
+            className="form-control"
+            rows="3"
+            value={editForm.description}
+            onChange={(e) =>
+              setEditForm({ ...editForm, description: e.target.value })
+            }
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Location</label>
+          <input
+            type="text"
+            className="form-control"
+            value={editForm.location}
+            onChange={(e) =>
+              setEditForm({ ...editForm, location: e.target.value })
+            }
+          />
+        </div>
+
+        <div className="row">
+
+          <div className="col-md-6 mb-3">
+            <label className="form-label">Target Trees</label>
+            <input
+              type="number"
+              min="0"
+              className="form-control"
+              value={editForm.target_trees}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  target_trees: e.target.value,
+                })
+              }
+              required
+            />
+          </div>
+
+          <div className="col-md-6 mb-3">
+            <label className="form-label">Planted Trees</label>
+            <input
+              type="number"
+              min="0"
+              className="form-control"
+              value={editForm.planted_trees}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  planted_trees: e.target.value,
+                })
+              }
+              required
+            />
+          </div>
+
+        </div>
+
+        <div className="mb-3">
+          <label className="form-label">Planting Date</label>
+          <input
+            type="date"
+            className="form-control"
+            value={editForm.planting_date?.slice(0, 10) || ''}
+            onChange={(e) =>
+              setEditForm({
+                ...editForm,
+                planting_date: e.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="form-label">Project Status</label>
+          <select
+            className="form-select"
+            value={editForm.status}
+            onChange={(e) =>
+              setEditForm({
+                ...editForm,
+                status: e.target.value,
+              })
+            }
+          >
+            <option value="planning">Planning</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+
+        <div className="d-flex gap-2">
+
+          <button
+            type="submit"
+            className="btn btn-success"
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setEditingProject(null)
+              setError('')
+              setActivePage('Projects')
+            }}
+          >
+            Cancel
+          </button>
+
+        </div>
+
+      </form>
+    </div>
+
+  </section>
+)}
 {/* Projects page */}
 {activePage === 'Projects' && (
   <section className="projects-section">
